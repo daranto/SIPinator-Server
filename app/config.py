@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     asterisk_port: int = 5060
     sip_username: str = "sipinator"
     sip_password: str = ""
+    sip_local_ip: str = ""  # Auto-detect if empty
     sip_local_port: int = 5080
     sip_extension: str = "9000"
 

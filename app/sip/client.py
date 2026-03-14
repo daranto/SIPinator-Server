@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import re
+import socket
 
 from pyVoIP.VoIP import CallState, InvalidStateError, PhoneStatus, VoIPPhone
 
@@ -33,6 +34,20 @@ def parse_sip_from(header: str) -> dict:
     return {"display_name": display_name, "uri": uri, "username": username}
 
 
+def detect_local_ip(target_host: str) -> str:
+    """Detect local IP by opening a UDP socket toward the target."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect((target_host, 1))
+        ip = s.getsockname()[0]
+        s.close()
+        logger.info(f"Auto-detected local IP: {ip}")
+        return ip
+    except Exception:
+        logger.warning("Could not auto-detect local IP, falling back to 0.0.0.0")
+        return "0.0.0.0"
+
+
 class SIPClient:
     def __init__(
         self,
@@ -40,6 +55,7 @@ class SIPClient:
         asterisk_port: int,
         username: str,
         password: str,
+        local_ip: str,
         local_port: int,
         on_call_callback,
     ):
@@ -47,6 +63,7 @@ class SIPClient:
         self.asterisk_port = asterisk_port
         self.username = username
         self.password = password
+        self.local_ip = local_ip or detect_local_ip(asterisk_host)
         self.local_port = local_port
         self.on_call_callback = on_call_callback
         self.phone: VoIPPhone | None = None
@@ -66,6 +83,7 @@ class SIPClient:
             username=self.username,
             password=self.password,
             callCallback=self._handle_incoming_call,
+            myIP=self.local_ip,
             sipPort=self.local_port,
             rtpPortLow=10000,
             rtpPortHigh=10010,

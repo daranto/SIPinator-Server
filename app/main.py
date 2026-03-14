@@ -59,6 +59,7 @@ async def lifespan(app: FastAPI):
                 asterisk_port=settings.asterisk_port,
                 username=settings.sip_username,
                 password=settings.sip_password,
+                local_ip=settings.sip_local_ip,
                 local_port=settings.sip_local_port,
                 on_call_callback=call_service.on_call_detected,
             )
