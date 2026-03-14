@@ -1,0 +1,6 @@
+fastapi==0.115.0
+uvicorn[standard]==0.34.0
+pydantic-settings==2.5.0
+pyVoIP==1.6.8
+aioapns==3.2
+aiosqlite==0.20.0

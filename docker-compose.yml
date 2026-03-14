@@ -1,0 +1,21 @@
+services:
+  sipinator:
+    build: .
+    container_name: sipinator-server
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+      - "5080:5080/udp"
+    volumes:
+      - ./data:/data
+      - ./certs:/certs:ro
+    env_file:
+      - .env
+    environment:
+      - DATABASE_PATH=/data/sipinator.db
+      - APNS_KEY_PATH=/certs/AuthKey.p8
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
