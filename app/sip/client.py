@@ -103,17 +103,28 @@ class SIPClient:
 
     @staticmethod
     def _get_header(headers: dict, name: str, default: str = "") -> str:
-        """Safely extract a SIP header value regardless of type (str or list)."""
+        """Safely extract a SIP header value regardless of type."""
         val = headers.get(name, default)
+        if val is None:
+            return default
         if isinstance(val, list):
-            return val[0] if val else default
-        return str(val) if val else default
+            val = val[0] if val else default
+        if isinstance(val, dict):
+            return val.get("raw", val.get("value", str(val)))
+        if hasattr(val, "raw"):
+            return str(val.raw)
+        return str(val)
 
     def _handle_incoming_call(self, call) -> None:
         """Called by pyVoIP in its SIP thread when INVITE arrives."""
         try:
             request = call.request
             headers = getattr(request, "headers", {})
+
+            # Debug: log raw header types on first call
+            for key in ("From", "To", "Call-ID"):
+                val = headers.get(key)
+                logger.debug(f"SIP header {key}: type={type(val).__name__}, value={val!r}")
 
             from_header = self._get_header(headers, "From")
             to_header = self._get_header(headers, "To")
