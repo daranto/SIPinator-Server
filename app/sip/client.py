@@ -1,37 +1,10 @@
 import asyncio
 import logging
-import re
 import socket
 
 from pyVoIP.VoIP import CallState, InvalidStateError, PhoneStatus, VoIPPhone
 
 logger = logging.getLogger(__name__)
-
-
-def parse_sip_from(header: str) -> dict:
-    """Parse SIP From/To header into display_name, uri, username."""
-    display_name = ""
-    username = ""
-    uri = ""
-
-    # Extract display name: "Name" <sip:...> or Name <sip:...>
-    name_match = re.match(r'"?([^"<]*?)"?\s*<', header)
-    if name_match:
-        display_name = name_match.group(1).strip()
-
-    # Extract URI
-    uri_match = re.search(r"<(sip:[^>]+)>", header)
-    if uri_match:
-        uri = uri_match.group(1)
-    elif "sip:" in header:
-        uri = header.split(";")[0].strip()
-
-    # Extract username from sip:user@host
-    user_match = re.search(r"sip:([^@]+)@", uri or header)
-    if user_match:
-        username = user_match.group(1)
-
-    return {"display_name": display_name, "uri": uri, "username": username}
 
 
 def detect_local_ip(target_host: str) -> str:
@@ -121,25 +94,32 @@ class SIPClient:
             request = call.request
             headers = getattr(request, "headers", {})
 
-            # Debug: log raw header types on first call
-            for key in ("From", "To", "Call-ID"):
-                val = headers.get(key)
-                logger.debug(f"SIP header {key}: type={type(val).__name__}, value={val!r}")
-
-            from_header = self._get_header(headers, "From")
-            to_header = self._get_header(headers, "To")
+            from_h = headers.get("From", {})
+            to_h = headers.get("To", {})
             call_id = self._get_header(headers, "Call-ID")
 
-            # Check for X-Original-Extension header (set by Asterisk dialplan)
-            x_ext = self._get_header(headers, "X-Original-Extension").strip()
+            # pyVoIP provides parsed dict with: number, caller, address, host
+            if isinstance(from_h, dict):
+                caller_number = from_h.get("number", "")
+                caller_name = from_h.get("caller", "") or caller_number
+            else:
+                caller_number = str(from_h)
+                caller_name = caller_number
 
-            caller_info = parse_sip_from(from_header)
-            to_info = parse_sip_from(to_header)
+            if isinstance(to_h, dict):
+                callee_ext = to_h.get("number", "")
+            else:
+                callee_ext = str(to_h)
+
+            # X-Original-Extension from Asterisk dialplan overrides To
+            x_ext = self._get_header(headers, "X-Original-Extension").strip()
+            if x_ext:
+                callee_ext = x_ext
 
             call_data = {
-                "caller_number": caller_info["username"],
-                "caller_name": caller_info["display_name"] or caller_info["username"],
-                "callee_extension": x_ext or to_info["username"],
+                "caller_number": caller_number,
+                "caller_name": caller_name,
+                "callee_extension": callee_ext,
                 "call_id": call_id,
             }
 
