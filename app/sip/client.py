@@ -101,20 +101,26 @@ class SIPClient:
                 logger.warning(f"SIP stop error: {e}")
             logger.info("SIP client stopped")
 
+    @staticmethod
+    def _get_header(headers: dict, name: str, default: str = "") -> str:
+        """Safely extract a SIP header value regardless of type (str or list)."""
+        val = headers.get(name, default)
+        if isinstance(val, list):
+            return val[0] if val else default
+        return str(val) if val else default
+
     def _handle_incoming_call(self, call) -> None:
         """Called by pyVoIP in its SIP thread when INVITE arrives."""
         try:
             request = call.request
-            from_header = request.headers.get("From", [""])[0] if hasattr(request, "headers") else ""
-            to_header = request.headers.get("To", [""])[0] if hasattr(request, "headers") else ""
-            call_id = request.headers.get("Call-ID", [""])[0] if hasattr(request, "headers") else ""
+            headers = getattr(request, "headers", {})
+
+            from_header = self._get_header(headers, "From")
+            to_header = self._get_header(headers, "To")
+            call_id = self._get_header(headers, "Call-ID")
 
             # Check for X-Original-Extension header (set by Asterisk dialplan)
-            x_ext = ""
-            if hasattr(request, "headers"):
-                x_ext_list = request.headers.get("X-Original-Extension", [])
-                if x_ext_list:
-                    x_ext = x_ext_list[0].strip()
+            x_ext = self._get_header(headers, "X-Original-Extension").strip()
 
             caller_info = parse_sip_from(from_header)
             to_info = parse_sip_from(to_header)
