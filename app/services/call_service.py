@@ -39,6 +39,7 @@ class CallService:
         payload = build_voip_push_payload(
             caller_name=caller_name,
             caller_number=caller_number,
+            call_id=call_id,
             call_uuid=call_uuid,
             sip_extension=callee_ext,
             asterisk_host=settings.asterisk_host,

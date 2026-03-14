@@ -5,6 +5,7 @@ import uuid
 def build_voip_push_payload(
     caller_name: str,
     caller_number: str,
+    call_id: str = "",
     call_uuid: str | None = None,
     sip_extension: str = "",
     asterisk_host: str = "",
@@ -16,6 +17,7 @@ def build_voip_push_payload(
         "aps": {},
         "caller_id": caller_number,
         "caller_name": caller_name or caller_number,
+        "call_id": call_id,
         "call_uuid": call_uuid,
         "sip_extension": sip_extension,
         "server_host": asterisk_host,
