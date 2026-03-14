@@ -1,0 +1,28 @@
+# Beispiel: SIPinator Server mit fertigem Image von GitHub Container Registry
+#
+# Nutzung:
+#   1. cp .env.example .env && nano .env    (Zugangsdaten eintragen)
+#   2. APNs .p8 Key in ./certs/ ablegen
+#   3. docker compose -f docker-compose.example.yml up -d
+
+services:
+  sipinator:
+    image: ghcr.io/daranto/sipinator-server:main
+    container_name: sipinator-server
+    restart: unless-stopped
+    ports:
+      - "8080:8080"       # REST API
+      - "5080:5080/udp"   # SIP
+    volumes:
+      - ./data:/data      # SQLite Datenbank
+      - ./certs:/certs:ro # APNs .p8 Key (read-only)
+    env_file:
+      - .env
+    environment:
+      - DATABASE_PATH=/data/sipinator.db
+      - APNS_KEY_PATH=/certs/AuthKey.p8
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
